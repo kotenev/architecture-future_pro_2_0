@@ -1,0 +1,40 @@
+@startuml C4_L2_AIPlatform
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+title Container Diagram — ИИ-платформа (домен «Искусственный интеллект»)
+
+Person(doctor, "Врач", "Запрашивает ИИ-рекомендации по диагнозу")
+
+System_Boundary(ai, "ИИ-платформа") {
+
+    Container(ml_api, "ML Inference API", "Python / FastAPI", "Онлайн-предикшн:\nдиагностика, рекомендации,\nаномалии")
+
+    Container(ml_pipeline, "ML Training Pipeline", "Python / Airflow + MLflow", "Обучение моделей,\nвалидация, A/B-тесты")
+
+    Container(feature_store, "Feature Store", "Feast + Redis", "Онлайн- и офлайн-фичи\nдля ML-моделей")
+
+    Container(model_registry, "Model Registry", "MLflow", "Версионирование моделей,\nстейджинг, деплой")
+
+    ContainerDb(ai_db, "AI Data Store", "ClickHouse + S3", "Датасеты обучения,\nметрики экспериментов,\nистория предикшнов")
+
+    Container(ai_events, "AI Event Producer", "Kafka Producer", "AIResearchCompleted\nModelUpdated\nAnomalyDetected")
+}
+
+' ===== Внешние контейнеры =====
+Container_Ext(event_broker, "Event Broker", "Apache Kafka", "Потребление мед. данных,\nпубликация результатов ИИ")
+Container_Ext(api_gw,      "API Gateway",  "Kong / Envoy",  "Внешний маршрутизатор")
+
+' ===== Связи =====
+Rel(doctor,       api_gw,         "Запрос ИИ-рекомендации", "HTTPS через UI клиники")
+Rel(api_gw,       ml_api,         "Маршрутизация",          "REST / gRPC")
+Rel(ml_api,       feature_store,  "Чтение фичей",           "gRPC / Redis Protocol")
+Rel(ml_api,       model_registry, "Загрузка модели",        "HTTP / S3")
+Rel(ml_api,       ai_events,     "Публикация результатов",  "In-process")
+Rel(ai_events,    event_broker,   "Produce",                "Kafka Protocol")
+Rel(event_broker, ml_pipeline,    "Consume мед. событий",   "Kafka Protocol")
+Rel(ml_pipeline,  feature_store,  "Запись фичей",           "gRPC / Batch")
+Rel(ml_pipeline,  model_registry, "Регистрация модели",     "HTTP")
+Rel(ml_pipeline,  ai_db,         "Хранение датасетов",      "SQL / S3 API")
+
+@enduml

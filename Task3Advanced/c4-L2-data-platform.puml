@@ -1,0 +1,48 @@
+@startuml C4_L2_DataPlatform
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+title Container Diagram — Платформа данных (Data Mesh + Self-Service BI)
+
+Person(analyst, "Бизнес-аналитик", "Создаёт отчёты, исследует данные")
+Person(manager, "Руководство",     "Просматривает управленческие дашборды")
+
+System_Boundary(data_platform, "Платформа данных") {
+
+    Container(bi_portal, "Self-Service BI Portal", "Apache Superset / Metabase", "Витрина данных:\nконструктор отчётов,\nдашборды, RBAC")
+
+    Container(data_catalog, "Data Catalog", "DataHub / Apache Atlas", "Каталог данных, lineage,\nкачество данных, метаданные")
+
+    Container(data_gateway, "Data Product Gateway", "Custom / GraphQL", "Единый API доступа\nк доменным Data Products")
+
+    Container(stream_proc, "Stream Processing", "Apache Flink /\nKafka Streams", "Near-real-time трансформации,\nCDC-потоки, агрегации")
+
+    ContainerDb(data_lake, "Data Lake", "S3 + Apache Iceberg", "Сырые и обработанные данные,\nпартиционирование по доменам")
+
+    Container(domain_dp, "Доменные Data Products", "dbt + Airflow", "Продукты данных:\nфинансовый, клинический,\nИИ-домен")
+
+    Container(dwh_bridge, "DWH Bridge (Legacy)", "ETL / dbt", "Мост совместимости:\nсинхронизация DWH → Data Lake\nна этапе миграции")
+}
+
+' ===== Внешние контейнеры =====
+Container_Ext(event_broker, "Event Broker",  "Apache Kafka",        "CDC-потоки из всех доменов")
+Container_Ext(legacy_dwh,   "Legacy DWH",    "MS SQL Server 2008",  "Постепенный вывод\nиз эксплуатации")
+
+' ===== Связи =====
+Rel(analyst,      bi_portal,     "Создание отчётов",        "HTTPS")
+Rel(manager,      bi_portal,     "Просмотр дашбордов",      "HTTPS")
+Rel(bi_portal,    data_gateway,  "Запросы к данным",        "GraphQL / REST")
+Rel(bi_portal,    data_catalog,  "Навигация по метаданным", "HTTPS")
+
+Rel(data_gateway, domain_dp,     "Доступ к Data Products",  "SQL / API")
+Rel(domain_dp,    data_lake,     "Чтение исходных данных",  "Iceberg / S3 API")
+Rel(domain_dp,    data_catalog,  "Регистрация метаданных",  "REST API")
+
+Rel(event_broker, stream_proc,   "Consume CDC events",      "Kafka Protocol")
+Rel(stream_proc,  data_lake,     "Запись в Iceberg",        "S3 API")
+Rel(stream_proc,  data_catalog,  "Регистрация lineage",     "REST API")
+
+Rel(legacy_dwh,   dwh_bridge,    "ETL extraction",          "JDBC / SQL")
+Rel(dwh_bridge,   data_lake,     "Batch sync",              "S3 API")
+
+@enduml
