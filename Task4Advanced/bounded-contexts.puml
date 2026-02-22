@@ -1,0 +1,151 @@
+@startuml bounded-contexts
+!theme plain
+title Bounded Contexts - "Будущее 2.0"\nContext Map (целевое состояние)
+
+skinparam rectangle {
+    RoundCorner 15
+    FontSize 12
+}
+skinparam package {
+    FontSize 14
+    FontStyle bold
+}
+skinparam note {
+    FontSize 10
+}
+
+package "Домен 'Пациенты'" as PatientDomain #E3F2FD {
+    rectangle "Patient Registry\n(Реестр пациентов)\n---\nРегистрация, идентификация,\nперсональные данные,\nсогласия (Consent)" as PR #BBDEFB
+}
+
+package "Домен 'Клинические операции'" as ClinicalDomain #E8F5E9 {
+    rectangle "Medical Records\n(Медицинские записи)\n---\nМедкарты, эпизоды лечения,\nдиагнозы, назначения" as MR #C8E6C9
+
+    rectangle "Diagnostics\n(Диагностика)\n---\nДиагностические исследования,\nрезультаты, снимки" as DX #C8E6C9
+}
+
+package "Домен 'ИИ-сервисы'" as AIDomain #F3E5F5 {
+    rectangle "AI Diagnostics\n(ИИ-диагностика)\n---\nМодели ИИ, предсказания,\nрекомендации, скоринг\n[Python]" as AI #E1BEE7
+}
+
+package "Домен 'Финтех'" as FinTechDomain #FFF3E0 {
+    rectangle "Credit Management\n(Управление кредитами)\n---\nЗаявки, скоринг, договоры,\nграфики платежей" as CM #FFE0B2
+
+    rectangle "Payment Processing\n(Платёжные операции)\n---\nПриём платежей, транзакции,\nэквайринг" as PP #FFE0B2
+
+    rectangle "Account Management\n(Управление счетами)\n---\nКлиентские счёта, остатки,\nвыписки\n[Golang, Java]" as AM #FFE0B2
+}
+
+package "Домен 'Биллинг'" as BillingDomain #FCE4EC {
+    rectangle "Billing & Invoicing\n(Биллинг)\n---\nСчета, тарифы, начисления,\nсверка с контрагентами" as BL #F8BBD0
+}
+
+package "Домен 'Персонал и ресурсы'" as StaffDomain #EFEBE9 {
+    rectangle "Staff Management\n(Управление персоналом)\n---\nСотрудники, расписания,\nквалификации, сертификации" as SM #D7CCC8
+
+    rectangle "Inventory Management\n(Инвентаризация)\n---\nОборудование, расходники,\nзакупки" as IM #D7CCC8
+}
+
+package "Домен 'Аналитика и данные'" as AnalyticsDomain #E0F7FA {
+    rectangle "Data Showcase\n(Витрина данных)\n---\nПортал самообслуживания,\nконструктор отчётов,\nагрегированные показатели" as DS #B2EBF2
+
+    rectangle "Data Governance\n(Управление данными)\n---\nКаталог данных, качество,\nлинейж, доступ" as DG #B2EBF2
+}
+
+package "Legacy (мост совместимости)" as LegacyZone #F5F5F5 {
+    database "DWH\nMS SQL Server 2008\n(read-only к этапу 3)" as DWH #BDBDBD
+
+    rectangle "Apache Camel\n(Интеграционная шина)\n(отключается к этапу 3)" as CAMEL #BDBDBD
+
+    rectangle "PowerBuilder\n(Клиентский UI)\n(замена на Web UI)" as PB #BDBDBD
+
+    hexagon "ACL\nDWH" as ACL_DWH #FFF9C4
+    hexagon "ACL\nCamel" as ACL_CAMEL #FFF9C4
+}
+
+queue "Event Broker\n(Apache Kafka)\nSchema Registry + DLQ" as EB #FF7043
+
+PR -[#1565C0]-> EB : <size:10>publish events</size>
+MR -[#2E7D32]-> EB : <size:10>publish events</size>
+DX -[#2E7D32]-> EB : <size:10>publish events</size>
+AI -[#7B1FA2]-> EB : <size:10>publish events</size>
+CM -[#E65100]-> EB : <size:10>publish events</size>
+PP -[#E65100]-> EB : <size:10>publish events</size>
+AM -[#E65100]-> EB : <size:10>publish events</size>
+BL -[#C2185B]-> EB : <size:10>publish events</size>
+SM -[#5D4037]-> EB : <size:10>publish events</size>
+IM -[#5D4037]-> EB : <size:10>publish events</size>
+
+EB -[#00838F]-> DS : <size:10>consume\n(все события)</size>
+EB -[#00838F]-> DG : <size:10>consume\n(метаданные)</size>
+EB -[#2E7D32]-> MR : <size:10>consume\n(patient, AI)</size>
+EB -[#C2185B]-> BL : <size:10>consume\n(clinical, fintech)</size>
+EB -[#7B1FA2]-> AI : <size:10>consume\n(clinical, consent)</size>
+EB -[#E65100]-> CM : <size:10>consume\n(payment, billing)</size>
+
+DX .[#2E7D32].> AI : <size:10>"Conformist"\nмедданные -> ИИ-анализ</size>
+AI .[#7B1FA2].> DX : <size:10>"OHS"\nрезультаты ИИ</size>
+
+DWH --> ACL_DWH
+ACL_DWH -[#FF8F00]-> EB : <size:10>CDC -> events\n(трансформация)</size>
+
+CAMEL --> ACL_CAMEL
+ACL_CAMEL -[#FF8F00]-> EB : <size:10>маршруты -> events\n(адаптация)</size>
+
+PB .[#9E9E9E].> DWH : <size:10>legacy UI\n(замена)</size>
+
+note right of PR
+  Published Language
+  Patient ID - единый
+  идентификатор (Golden Record)
+  для всех доменов
+end note
+
+note bottom of ACL_DWH
+  Anti-Corruption Layer
+  Debezium CDC ->
+  трансформация в
+  целевой формат событий
+end note
+
+note bottom of ACL_CAMEL
+  Anti-Corruption Layer
+  Camel-маршруты
+  транслируются в
+  Kafka-топики через адаптеры
+end note
+
+note right of DS
+  Витрина данных
+  НЕ включает:
+  - медкарты
+  - истории болезней
+  - результаты исследований
+  (требование бизнеса)
+end note
+
+note bottom of EB
+  Транспорт: Apache Kafka
+  Формат: JSON + Avro
+  Schema Registry: Confluent
+  DLQ: для каждого топика
+  Retention: 30 дней (настраивается)
+end note
+
+legend bottom left
+  |= Обозначение |= Описание |
+  | <#BBDEFB> | Домен 'Пациенты' |
+  | <#C8E6C9> | Домен 'Клинические операции' |
+  | <#E1BEE7> | Домен 'ИИ-сервисы' |
+  | <#FFE0B2> | Домен 'Финтех' |
+  | <#F8BBD0> | Домен 'Биллинг' |
+  | <#D7CCC8> | Домен 'Персонал и ресурсы' |
+  | <#B2EBF2> | Домен 'Аналитика и данные' |
+  | <#BDBDBD> | Legacy (этап миграции) |
+  | <#FFF9C4> | Anti-Corruption Layer |
+  | <#FF7043> | Event Broker (Kafka) |
+  | ——> | Публикация / потребление событий |
+  | - - > | Синхронный API (при необходимости) |
+end legend
+
+@enduml
