@@ -1,0 +1,88 @@
+@startuml context-map-ddd
+!theme plain
+title Context Map (DDD) - "Будущее 2.0"\nОтношения между Bounded Contexts
+
+skinparam rectangle {
+    RoundCorner 15
+    FontSize 12
+    shadowing false
+}
+
+rectangle "Patient Registry\n\n//Реестр пациентов//\n---\nГолден-рекорд пациента\nСогласия\n\nTeam: Клиники" as PR #BBDEFB
+
+rectangle "Medical Records\n\n//Медицинские записи//\n---\nЭпизоды лечения\nДиагнозы, назначения\n\nTeam: Клиники" as MR #C8E6C9
+
+rectangle "Diagnostics\n\n//Диагностика//\n---\nИсследования\nРезультаты, снимки\n\nTeam: Клиники" as DX #C8E6C9
+
+rectangle "AI Diagnostics\n\n//ИИ-диагностика//\n---\nМодели ИИ\nПредсказания\n\nTeam: ИИ-компания\n[Python]" as AI #E1BEE7
+
+rectangle "Credit Management\n\n//Управление кредитами//\n---\nЗаявки, скоринг\nДоговоры\n\nTeam: Финтех\n[Golang, Java]" as CM #FFE0B2
+
+rectangle "Payment Processing\n\n//Платёжные операции//\n---\nТранзакции\nЭквайринг\n\nTeam: Финтех\n[Golang, Java]" as PP #FFE0B2
+
+rectangle "Account Management\n\n//Управление счетами//\n---\nСчета, остатки\nВыписки\n\nTeam: Финтех\n[Golang, Java]" as AM #FFE0B2
+
+rectangle "Billing & Invoicing\n\n//Биллинг//\n---\nСчета, тарифы\nНачисления\n\nTeam: Головной офис" as BL #F8BBD0
+
+rectangle "Staff Management\n\n//Персонал//\n---\nСотрудники\nРасписания\n\nTeam: Головной офис" as SM #D7CCC8
+
+rectangle "Inventory Management\n\n//Инвентаризация//\n---\nОборудование\nЗакупки\n\nTeam: Головной офис" as IM #D7CCC8
+
+rectangle "Data Showcase\n\n//Витрина данных//\n---\nПортал самообслуживания\nОтчёты, дашборды\n\nTeam: Головной офис" as DS #B2EBF2
+
+rectangle "Data Governance\n\n//Управление данными//\n---\nКаталог, качество\nЛинейж, доступ\n\nTeam: Головной офис" as DG #B2EBF2
+
+rectangle "DWH\n(SQL Server 2008)\n//legacy - read-only//" as DWH #BDBDBD
+rectangle "Apache Camel\n(Шина)\n//legacy - отключаемая//" as CAMEL #BDBDBD
+
+PR -[#1565C0,bold]---> MR : Published Language\nPatient ID\n(U -> D)
+PR -[#1565C0,bold]---> CM : Published Language\nPatient ID\n(U -> D)
+PR -[#1565C0,bold]---> BL : Published Language\nPatient ID\n(U -> D)
+PR -[#1565C0]---> DS : Published Language\n(U -> D)
+
+CM -[#E65100,bold]---> PP : Partnership\ncontractId -> payment
+CM -[#E65100]---> AM : Customer–Supplier\n(U -> D)
+CM -[#E65100,bold]---> BL : Customer–Supplier\nкредит -> счёт\n(U -> D)
+PP -[#E65100]---> BL : Customer–Supplier\nплатёж -> биллинг\n(U -> D)
+
+DX -[#2E7D32,bold]---> AI : Conformist\nИИ работает с форматом\nклинического домена\n(U -> D)
+
+AI -[#7B1FA2,bold,dashed]---> MR : OHS + Published Language\nРезультаты ИИ\nчерез события/API\n(U -> D)
+
+MR -[#00838F]---> DS : PL via events\n(U -> D)
+AI -[#00838F]---> DS : PL via events\n(U -> D)
+CM -[#00838F]---> DS : PL via events\n(U -> D)
+BL -[#00838F]---> DS : PL via events\n(U -> D)
+SM -[#00838F]---> DS : PL via events\n(U -> D)
+IM -[#00838F]---> DS : PL via events\n(U -> D)
+
+DS -[#00838F]-> DG : Shared Kernel\n(метаданные)
+
+MR -[#2E7D32]-> DX : Shared Kernel\n(episodeId, patientId)
+
+SM -[#5D4037]-> MR : Events\n(ShiftAssigned)
+IM -[#5D4037]-> BL : Events\n(SupplyOrderCreated)
+
+DWH -[#FF8F00,bold,dashed]---> DS : ACL\nDebezium CDC ->\nтрансформация
+DWH -[#FF8F00,dashed]---> MR : ACL\nlegacy data\n(этап миграции)
+CAMEL -[#FF8F00,bold,dashed]---> CM : ACL\nCamel-маршруты ->\nадаптеры
+CAMEL -[#FF8F00,dashed]---> AI : ACL\nlegacy routes\n(этап миграции)
+
+legend bottom left
+  Обозначения отношений (DDD Context Map):
+
+  |= Паттерн |= Описание |
+  | Published Language (PL) | Upstream публикует контракт; downstream принимает как есть |
+  | Customer–Supplier (C/S) | Upstream учитывает потребности downstream |
+  | Conformist** | Downstream принимает модель upstream без изменений |
+  | Open Host Service (OHS) | Upstream предоставляет стандартизированный API/события |
+  | Partnership | Два контекста развиваются совместно |
+  | Shared Kernel | Общая модель между контекстами одного домена |
+  | ACL (Anti-Corruption Layer) | Адаптер для защиты от legacy-модели |
+
+  (U → D) = Upstream -> Downstream
+  Сплошная линия = целевое отношение
+  Пунктир = этап миграции / временное
+end legend
+
+@enduml
