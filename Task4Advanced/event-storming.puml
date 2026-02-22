@@ -1,0 +1,227 @@
+@startuml event-storming
+!theme plain
+title Event Storming - "Будущее 2.0"\nBig Picture: ключевые потоки событий
+
+skinparam rectangle {
+    RoundCorner 10
+    FontSize 11
+}
+skinparam agent {
+    FontSize 10
+}
+
+rectangle "ПОТОК 1: Пациент -> Лечение -> ИИ" as Flow1 #F5F5F5 {
+
+    agent "Оператор\nклиники" as Actor1 #CE93D8
+
+    rectangle "Зарегистрировать\nпациента" as Cmd1 #64B5F6
+    rectangle "Patient" as Agg1 #FFD54F
+    rectangle "PatientRegistered\nПациент зарегистрирован" as Evt1 #FFB74D
+
+    rectangle "Создать биллинг-\nаккаунт" as Pol1 #E6EE9C
+    rectangle "Уведомить\nдомены" as Pol1b #E6EE9C
+
+    agent "Врач" as Actor2 #CE93D8
+
+    rectangle "Создать эпизод\nлечения" as Cmd2 #64B5F6
+    rectangle "MedicalRecord" as Agg2 #FFD54F
+    rectangle "TreatmentEpisode\nCreated\nЭпизод лечения создан" as Evt2 #FFB74D
+
+    rectangle "Запросить\nИИ-анализ" as Pol2 #E6EE9C
+
+    agent "Система ИИ\n(Python)" as Actor3 #CE93D8
+
+    rectangle "Провести\nИИ-исследование" as Cmd3 #64B5F6
+    rectangle "AIStudy" as Agg3 #FFD54F
+    rectangle "AIStudyCompleted\nИИ-исследование\nзавершено" as Evt3 #FFB74D
+
+    rectangle "Добавить результат\nИИ в медкарту" as Pol3 #E6EE9C
+
+    rectangle "Назначить\nлечение" as Cmd4 #64B5F6
+    rectangle "Treatment" as Agg4 #FFD54F
+    rectangle "TreatmentPrescribed\nЛечение назначено" as Evt4 #FFB74D
+
+    rectangle "Начислить\nза услуги" as Pol4 #E6EE9C
+
+    rectangle "TreatmentCompleted\nЛечение завершено" as Evt5 #FFB74D
+
+    rectangle "Billing, FinTech,\nAnalytics" as Sub1 #E0E0E0
+    rectangle "Billing,\nAnalytics" as Sub2 #E0E0E0
+    rectangle "Billing, FinTech,\nAnalytics" as Sub3 #E0E0E0
+
+    ' Связи потока 1
+    Actor1 --> Cmd1
+    Cmd1 --> Agg1
+    Agg1 --> Evt1
+    Evt1 --> Pol1
+    Evt1 --> Pol1b
+    Pol1b ..> Sub1
+
+    Actor2 --> Cmd2
+    Cmd2 --> Agg2
+    Agg2 --> Evt2
+    Evt2 --> Pol2
+    Pol2 --> Actor3
+
+    Actor3 --> Cmd3
+    Cmd3 --> Agg3
+    Agg3 --> Evt3
+    Evt3 --> Pol3
+    Pol3 --> Actor2
+
+    Actor2 --> Cmd4
+    Cmd4 --> Agg4
+    Agg4 --> Evt4
+    Evt4 --> Pol4
+    Pol4 ..> Sub2
+
+    Agg4 --> Evt5
+    Evt5 ..> Sub3
+}
+
+rectangle "ПОТОК 2: Кредитование" as Flow2 #F5F5F5 {
+
+    agent "Клиент /\nМенеджер" as Actor4 #CE93D8
+
+    rectangle "Подать заявку\nна кредит" as Cmd5 #64B5F6
+    rectangle "CreditApplication" as Agg5 #FFD54F
+    rectangle "CreditApplication\nSubmitted\nЗаявка на кредит подана" as Evt6 #FFB74D
+
+    rectangle "Запустить\nскоринг" as Pol5 #E6EE9C
+
+    rectangle "Кредитная история,\nданные клиента" as RM1 #81C784
+    rectangle "CreditContract" as Agg6 #FFD54F
+    rectangle "CreditScoring\nCompleted\nСкоринг завершён" as Evt7 #FFB74D
+
+    rectangle "CreditContractCreated\nКредитный договор создан" as Evt8 #FFB74D
+
+    rectangle "Создать\nграфик платежей" as Pol6 #E6EE9C
+
+    agent "Платёжная\nсистема" as Actor5 #CE93D8
+
+    rectangle "Провести\nплатёж" as Cmd6 #64B5F6
+    rectangle "Payment" as Agg7 #FFD54F
+    rectangle "PaymentProcessed\nПлатёж проведён" as Evt9 #FFB74D
+
+    rectangle "PaymentOverdue\nПросрочка платежа" as Evt10 #FFB74D
+
+    rectangle "Запустить\nколлекшн" as Pol7 #E6EE9C
+
+    rectangle "Billing, Payment,\nAnalytics" as Sub4 #E0E0E0
+    rectangle "Billing, Credit,\nAnalytics" as Sub5 #E0E0E0
+    rectangle "Credit Mgmt,\nBilling" as Sub6 #E0E0E0
+
+    Actor4 --> Cmd5
+    Cmd5 --> Agg5
+    Agg5 --> Evt6
+    Evt6 --> Pol5
+    Pol5 ..> RM1
+    RM1 --> Agg6
+    Agg6 --> Evt7
+    Evt7 --> Evt8
+    Evt8 --> Pol6
+    Pol6 ..> Sub4
+
+    Actor5 --> Cmd6
+    Cmd6 --> Agg7
+    Agg7 --> Evt9
+    Evt9 ..> Sub5
+
+    Agg7 --> Evt10
+    Evt10 --> Pol7
+    Pol7 ..> Sub6
+}
+
+rectangle "ПОТОК 3: Биллинг" as Flow3 #F5F5F5 {
+
+    rectangle "При TreatmentPrescribed\nили CreditContractCreated" as Trigger1 #E6EE9C
+
+    rectangle "Сформировать\nсчёт" as Cmd7 #64B5F6
+    rectangle "Invoice" as Agg8 #FFD54F
+    rectangle "InvoiceIssued\nСчёт выставлен" as Evt11 #FFB74D
+
+    rectangle "Инициировать\nоплату" as Pol8 #E6EE9C
+
+    rectangle "InvoicePaid\nСчёт оплачен" as Evt12 #FFB74D
+
+    rectangle "Обновить\nData Showcase" as Pol9 #E6EE9C
+
+    rectangle "FinTech\n(Payment)" as Sub7 #E0E0E0
+    rectangle "Analytics\n(Data Showcase)" as Sub8 #E0E0E0
+
+    Trigger1 --> Cmd7
+    Cmd7 --> Agg8
+    Agg8 --> Evt11
+    Evt11 --> Pol8
+    Pol8 ..> Sub7
+    Agg8 --> Evt12
+    Evt12 --> Pol9
+    Pol9 ..> Sub8
+}
+
+rectangle "ПОТОК 4: Персонал и ресурсы" as Flow4 #F5F5F5 {
+
+    agent "HR-менеджер" as Actor6 #CE93D8
+
+    rectangle "Принять\nсотрудника" as Cmd8 #64B5F6
+    rectangle "Employee" as Agg9 #FFD54F
+    rectangle "EmployeeHired\nСотрудник принят" as Evt13 #FFB74D
+
+    rectangle "ShiftAssigned\nСмена назначена" as Evt14 #FFB74D
+
+    agent "Завхоз /\nСнабженец" as Actor7 #CE93D8
+
+    rectangle "Создать заявку\nна закупку" as Cmd9 #64B5F6
+    rectangle "SupplyOrder" as Agg10 #FFD54F
+    rectangle "SupplyOrder\nCreated\nЗаявка создана" as Evt15 #FFB74D
+
+    rectangle "InventoryReplenished\nЗапас пополнен" as Evt16 #FFB74D
+
+    rectangle "InventoryLow\nЗапас ниже порога" as Evt17 #EF5350
+
+    rectangle "Автозаказ" as Pol10 #E6EE9C
+
+    rectangle "Clinical,\nAnalytics" as Sub9 #E0E0E0
+    rectangle "Clinical" as Sub10 #E0E0E0
+    rectangle "Billing,\nAnalytics" as Sub11 #E0E0E0
+    rectangle "Clinical,\nAnalytics" as Sub12 #E0E0E0
+
+    Actor6 --> Cmd8
+    Cmd8 --> Agg9
+    Agg9 --> Evt13
+    Evt13 ..> Sub9
+    Agg9 --> Evt14
+    Evt14 ..> Sub10
+
+    Actor7 --> Cmd9
+    Cmd9 --> Agg10
+    Agg10 --> Evt15
+    Evt15 ..> Sub11
+    Agg10 --> Evt16
+    Evt16 ..> Sub12
+
+    Evt17 --> Pol10
+    Pol10 --> Cmd9
+}
+
+rectangle "HOT SPOTS" as HS #FFEBEE {
+    rectangle "Дублирование\nданных пациента\n(Golden Record)" as HS1 #EF5350
+    rectangle "Eventual consistency\nClinical <-> FinTech" as HS2 #EF5350
+    rectangle "Миграция legacy-\nсобытий из Camel" as HS3 #EF5350
+    rectangle "Защита PHI\nв событиях" as HS4 #EF5350
+    rectangle "Ordering &\nIdempotency" as HS5 #EF5350
+}
+
+legend bottom left
+  |= Цвет |= Элемент Event Storming |
+  | <#FFB74D> | Domain Event (событие) |
+  | <#64B5F6> | Command (команда) |
+  | <#CE93D8> | Actor / Role (актор) |
+  | <#81C784> | Read Model (модель чтения) |
+  | <#E6EE9C> | Policy (автоматическая реакция) |
+  | <#FFD54F> | Aggregate (агрегат) |
+  | <#EF5350> | Hot Spot (проблемная зона) |
+  | <#E0E0E0> | Подписчик (downstream domain) |
+end legend
+
+@enduml

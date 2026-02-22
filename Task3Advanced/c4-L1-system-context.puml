@@ -1,0 +1,50 @@
+@startuml C4_L1_SystemContext
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+title System Context — «Будущее 2.0» (целевое состояние, горизонт 3 года)
+
+' ===== Персоны =====
+Person(patient,        "Пациент",              "Клиент клиник и финтех-сервисов")
+Person(doctor,         "Врач / Медперсонал",   "Использует медицинские системы и ИИ-рекомендации")
+Person(operator,       "Оператор клиники",     "Управление пациентами, расписание, документооборот")
+Person(analyst,        "Бизнес-аналитик",      "Создаёт отчёты через портал самообслуживания")
+Person(manager,        "Руководство",          "Потребляет управленческую отчётность и дашборды")
+
+' ===== Системы экосистемы =====
+Enterprise_Boundary(eco, "Экосистема «Будущее 2.0»") {
+    System(clinic,      "Медицинская платформа",    "Клинические процессы, EHR,\nрасписание, документооборот")
+    System(fintech,     "Финтех-платформа",         "Банковские сервисы, кредиты,\nплатежи, счета")
+    System(ai,          "ИИ-платформа",             "ML-модели диагностики,\nрекомендательные системы")
+    System(data,        "Платформа данных",         "Data Mesh: доменные Data Products,\nкаталог, Self-Service BI")
+    System(integration, "Интеграционный слой",      "Event Broker (Kafka) +\nAPI Gateway + ACL")
+}
+
+' ===== Внешние системы =====
+System_Ext(pharma,    "Фарм. компании",                    "Поставщики препаратов,\nинтеграция по каталогам")
+System_Ext(medequip,  "Производитель мед. оборудования",   "Поставка и телеметрия оборудования")
+System_Ext(regulator, "Регуляторы",                        "ЦБ РФ, Минздрав, Роскомнадзор")
+System_Ext(ext_lab,   "Внешние лаборатории",               "Результаты исследований по API")
+
+' ===== Связи: Персоны → Системы =====
+Rel(patient,  clinic,   "Запись, приём, результаты")
+Rel(patient,  fintech,  "Платежи, кредиты")
+Rel(doctor,   clinic,   "Диагностика, лечение, EHR")
+Rel(doctor,   ai,       "ИИ-рекомендации по диагнозу")
+Rel(operator, clinic,   "Управление пациентами и расписанием")
+Rel(analyst,  data,     "Self-Service BI: конструктор отчётов")
+Rel(manager,  data,     "Управленческие дашборды")
+
+' ===== Связи: Системы ↔ Интеграционный слой =====
+Rel(clinic,      integration, "Доменные события, API")
+Rel(fintech,     integration, "Доменные события, API")
+Rel(ai,          integration, "Доменные события, API")
+Rel(data,        integration, "Потребление событий, CDC")
+
+' ===== Связи: Интеграционный слой → Внешние =====
+Rel(integration, pharma,    "Каталоги препаратов, заказы")
+Rel(integration, medequip,  "Телеметрия, заказы оборудования")
+Rel(integration, regulator, "Регуляторная отчётность")
+Rel(integration, ext_lab,   "Результаты исследований")
+
+@enduml

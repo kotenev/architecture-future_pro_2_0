@@ -1,0 +1,37 @@
+@startuml C4_L2_ClinicPlatform
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+title Container Diagram — Медицинская платформа (домен «Клиники»)
+
+Person(doctor,   "Врач / Медперсонал",  "Работает с EHR и диагностикой")
+Person(operator, "Оператор клиники",    "Управляет пациентами и расписанием")
+
+System_Boundary(clinic, "Медицинская платформа") {
+
+    Container(clinic_web, "Веб-приложение клиники", "React / TypeScript", "SPA для операторов и врачей.\nЗаменяет PowerBuilder")
+
+    Container(clinic_api, "Clinic API", "Java / Spring Boot", "REST + gRPC.\nУправление пациентами,\nрасписание, EHR, назначения")
+
+    ContainerDb(clinic_db, "Clinic DB", "PostgreSQL 16", "Пациенты, визиты,\nрасписание, назначения")
+
+    Container(ehr_store, "EHR Storage", "S3-compatible\nObject Storage", "Медицинские карты, снимки,\nDICOM-файлы")
+
+    Container(clinic_events, "Clinic Event Producer", "Kafka Producer\n(Java / Spring)", "Публикация доменных событий:\nPatientRegistered\nVisitCompleted\nDiagnosisAssigned")
+}
+
+' ===== Внешние контейнеры =====
+Container_Ext(api_gw,       "API Gateway",   "Kong / Envoy", "Маршрутизация, аутентификация,\nrate limiting, JWT")
+Container_Ext(event_broker,  "Event Broker",  "Apache Kafka",  "Центральная шина событий\nэкосистемы")
+
+' ===== Связи =====
+Rel(doctor,   clinic_web,    "Использует",        "HTTPS")
+Rel(operator, clinic_web,    "Использует",        "HTTPS")
+Rel(clinic_web, api_gw,     "Запросы",           "HTTPS / REST")
+Rel(api_gw, clinic_api,     "Маршрутизация",     "REST / gRPC")
+Rel(clinic_api, clinic_db,  "Чтение / запись",   "SQL / TCP 5432")
+Rel(clinic_api, ehr_store,  "Загрузка / скачивание файлов", "S3 API / HTTPS")
+Rel(clinic_api, clinic_events, "Публикация событий", "In-process")
+Rel(clinic_events, event_broker, "Produce",      "Kafka Protocol\nTCP 9092")
+
+@enduml

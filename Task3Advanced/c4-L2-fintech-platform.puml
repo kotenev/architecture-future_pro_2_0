@@ -1,0 +1,41 @@
+@startuml C4_L2_FintechPlatform
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+title Container Diagram — Финтех-платформа (домен «Банк»)
+
+Person(customer, "Клиент банка", "Платежи, кредиты, управление счетами")
+
+System_Boundary(fintech, "Финтех-платформа") {
+
+    Container(fintech_web, "Банковский портал", "React / TypeScript", "Клиентский банкинг,\nкредитные заявки, выписки")
+
+    Container(fintech_api, "Fintech API Gateway", "Golang", "Высоконагруженный API-слой.\nМаршрутизация к сервисам домена")
+
+    Container(payment_svc, "Payment Service", "Java / Spring Boot", "Процессинг платежей,\nэквайринг, переводы")
+
+    Container(credit_svc, "Credit Service", "Golang", "Скоринг, оформление\nкредитов, портфель")
+
+    ContainerDb(fintech_db, "Fintech DB", "PostgreSQL 16 + Citus", "Финансовые данные,\nтранзакции,\nкредитные договоры")
+
+    Container(fintech_events, "Fintech Event Producer", "Kafka Producer", "CreditCreated\nPaymentProcessed\nAccountOpened")
+}
+
+' ===== Внешние контейнеры =====
+Container_Ext(event_broker, "Event Broker",         "Apache Kafka",   "Центральная шина событий")
+Container_Ext(core_banking, "Core Banking System",  "Legacy / миграция", "АБС — мост совместимости\nна этапе миграции")
+Container_Ext(api_gw,      "API Gateway",           "Kong / Envoy",   "Внешний маршрутизатор")
+
+' ===== Связи =====
+Rel(customer,    fintech_web,   "Использует",          "HTTPS")
+Rel(fintech_web, api_gw,       "Запросы",             "HTTPS / REST")
+Rel(api_gw,      fintech_api,  "Маршрутизация",       "REST / gRPC")
+Rel(fintech_api, payment_svc,  "Платёжные операции",   "gRPC")
+Rel(fintech_api, credit_svc,   "Кредитные операции",   "gRPC")
+Rel(payment_svc, fintech_db,   "Чтение / запись",      "SQL / TCP 5432")
+Rel(credit_svc,  fintech_db,   "Чтение / запись",      "SQL / TCP 5432")
+Rel(fintech_api, fintech_events, "Публикация событий", "In-process")
+Rel(fintech_events, event_broker, "Produce",           "Kafka Protocol")
+Rel(fintech_api, core_banking, "Синхронизация\n(ACL, переходный период)", "REST / HTTPS")
+
+@enduml

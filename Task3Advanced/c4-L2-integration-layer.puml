@@ -1,0 +1,51 @@
+@startuml C4_L2_IntegrationLayer
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+title Container Diagram — Интеграционный слой
+
+System_Boundary(integration, "Интеграционный слой") {
+
+    Container(kafka_cluster, "Kafka Cluster", "Apache Kafka 3.x /\nConfluent Platform", "Event Broker:\n3+ брокера, multi-AZ,\nmulti-DC replication")
+
+    Container(schema_registry, "Schema Registry", "Confluent\nSchema Registry", "Avro / Protobuf схемы,\nверсионирование контрактов,\nbackward compatibility")
+
+    Container(api_gateway, "API Gateway", "Kong / Envoy", "Внешний и внутренний\nAPI routing, JWT, mTLS,\nrate limiting")
+
+    Container(acl_camel, "ACL: Camel Bridge", "Apache Camel", "Anti-Corruption Layer\nдля легаси-интеграций.\nВыводится к 36-му месяцу")
+
+    Container(dlq_handler, "DLQ Handler", "Golang microservice", "Обработка failed events,\nalert, retry-логика,\nDead Letter Queue")
+
+    Container(cdc_connector, "CDC Connectors", "Debezium", "Change Data Capture\nиз PostgreSQL\nи Legacy DWH")
+}
+
+' ===== Внешние системы-домены =====
+System_Ext(clinic_domain,  "Домен Клиник",       "Медицинская платформа")
+System_Ext(fintech_domain, "Домен Финтех",       "Финтех-платформа")
+System_Ext(ai_domain,      "Домен ИИ",           "ИИ-платформа")
+System_Ext(data_domain,    "Домен Данных",       "Платформа данных (Data Mesh)")
+System_Ext(legacy_systems, "Legacy Systems",      "DWH + PowerBuilder + Camel")
+
+' ===== Связи: Домены → Kafka =====
+Rel(clinic_domain,  kafka_cluster, "Produce events",              "Kafka Protocol")
+Rel(fintech_domain, kafka_cluster, "Produce events",              "Kafka Protocol")
+Rel(ai_domain,      kafka_cluster, "Produce events",              "Kafka Protocol")
+Rel(kafka_cluster,  data_domain,   "Consume events",              "Kafka Protocol")
+Rel(kafka_cluster,  ai_domain,     "Consume мед. событий",        "Kafka Protocol")
+
+' ===== Связи: Внутренние =====
+Rel(kafka_cluster,   schema_registry, "Validate schemas",         "HTTP / HTTPS")
+Rel(kafka_cluster,   dlq_handler,     "Failed events → DLQ",      "Kafka Protocol")
+Rel(cdc_connector,   kafka_cluster,   "CDC events",               "Kafka Protocol")
+
+' ===== Связи: Legacy =====
+Rel(legacy_systems,  acl_camel,       "Legacy protocols",         "SOAP / JDBC / JMS")
+Rel(acl_camel,       kafka_cluster,   "Translated events",        "Kafka Protocol")
+Rel(legacy_systems,  cdc_connector,   "DB change stream",         "JDBC / WAL")
+
+' ===== Связи: API Gateway → Домены =====
+Rel(api_gateway, clinic_domain,  "Route external requests",  "REST / gRPC")
+Rel(api_gateway, fintech_domain, "Route external requests",  "REST / gRPC")
+Rel(api_gateway, ai_domain,     "Route external requests",   "REST / gRPC")
+
+@enduml

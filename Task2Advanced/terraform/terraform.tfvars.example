@@ -1,0 +1,15 @@
+project_name = "future-2-0"
+environment  = "dev"
+docker_host  = "unix:///var/run/docker.sock"
+
+postgres_version  = "16-alpine"
+postgres_db       = "future_db"
+postgres_user     = "future_app"
+postgres_password = "CHANGE_ME_postgres_secret"
+
+redis_version  = "7-alpine"
+redis_password = "CHANGE_ME_redis_secret"
+
+kafka_version = "3.7"
+
+grafana_admin_password = "CHANGE_ME_grafana_secret"

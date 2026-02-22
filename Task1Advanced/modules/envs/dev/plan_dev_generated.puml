@@ -1,0 +1,65 @@
+@startuml Terraform Infrastructure
+
+title Future 2.0 - Dev Environment
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam component {
+    BackgroundColor #E8F5E9
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+}
+skinparam rectangle {
+    BackgroundColor #E3F2FD
+}
+
+cloud "Cloud Infrastructure\nru-central1-a" as cloud {
+
+    rectangle "Network Layer" as network_layer #E3F2FD {
+        [yandex_vpc_network.main\n----\nVPC Network] as yandex_vpc_network_main
+        [yandex_vpc_subnet.main\n----\nCIDR: 10.10.0.0/24] as yandex_vpc_subnet_main
+    }
+
+    rectangle "Security Layer" as security_layer #FFF3E0 {
+        [yandex_vpc_security_group.default\n----\nSecurity Group\nIngress/Egress rules] as yandex_vpc_security_group_default
+    }
+
+    package "module.bi_server" as mod_bi_server #FCE4EC {
+        [disk.boot_disk\n----\n20 GB HDD] as module_bi_server_yandex_compute_disk_boot_disk
+        [instance.vm\n----\n**dev-bi-server**\n2 CPU (20%) | 4 GB RAM\nNAT enabled] as module_bi_server_yandex_compute_instance_vm
+    }
+
+    package "module.dwh_server" as mod_dwh_server #E8F5E9 {
+        [disk.boot_disk\n----\n20 GB HDD] as module_dwh_server_yandex_compute_disk_boot_disk
+        [disk.data_disk\n----\n50 GB HDD] as module_dwh_server_yandex_compute_disk_data_disk
+        [instance.vm\n----\n**dev-dwh-server**\n2 CPU (20%) | 4 GB RAM\nNAT enabled] as module_dwh_server_yandex_compute_instance_vm
+    }
+
+    package "module.integration_server" as mod_integration_server #FFF3E0 {
+        [disk.boot_disk\n----\n20 GB HDD] as module_integration_server_yandex_compute_disk_boot_disk
+        [disk.data_disk\n----\n30 GB HDD] as module_integration_server_yandex_compute_disk_data_disk
+        [instance.vm\n----\n**dev-integration-bus**\n2 CPU (20%) | 4 GB RAM\nNAT enabled] as module_integration_server_yandex_compute_instance_vm
+    }
+
+}
+
+' Dependencies
+yandex_vpc_subnet_main --> yandex_vpc_network_main : network
+yandex_vpc_security_group_default --> yandex_vpc_network_main : network
+module_bi_server_yandex_compute_instance_vm --> module_bi_server_yandex_compute_disk_boot_disk : disk
+module_dwh_server_yandex_compute_instance_vm --> module_bi_server_yandex_compute_disk_boot_disk : disk
+module_integration_server_yandex_compute_instance_vm --> module_bi_server_yandex_compute_disk_boot_disk : disk
+
+legend right
+    |= Color |= Resource Type |
+    | <#E3F2FD> | Network |
+    | <#FFF3E0> | Security |
+    | <#E8F5E9> | Compute |
+    | <#FCE4EC> | Storage |
+    | <#F3E5F5> | Database |
+endlegend
+
+footer Generated from Terraform Plan | Terraform 1.14.4
+
+@enduml
